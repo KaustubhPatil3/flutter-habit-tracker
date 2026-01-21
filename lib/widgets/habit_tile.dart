@@ -13,27 +13,55 @@ class HabitTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = Color(habit.colorValue);
+
     return Card(
+      elevation: 2,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            Checkbox(
-              value: habit.completedToday,
-              onChanged: (_) => onToggle(),
-            ),
-            Expanded(
-              child: Text(
-                habit.name,
-                style: Theme.of(context).textTheme.titleMedium,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onToggle,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 12,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
-            ),
-            Text(
-              '${habit.streak} 🔥',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      habit.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Streak: ${habit.streak} 🔥',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                habit.completedToday
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                color: habit.completedToday ? accent : Colors.grey,
+                size: 28,
+              ),
+            ],
+          ),
         ),
       ),
     );

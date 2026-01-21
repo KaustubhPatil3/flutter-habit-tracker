@@ -1,56 +1,40 @@
 import 'package:hive/hive.dart';
 import '../models/habit.dart';
+import 'package:flutter/material.dart';
 
 class HabitStorage {
-  static final Box _box = Hive.box('habitsBox');
+  static final Box box = Hive.box('habitsBox');
 
+  /// Load habits from Hive
   static List<Habit> loadHabits() {
-    _checkDailyReset();
-
-    final List data = _box.get('habits', defaultValue: []);
+    final List data = box.get('habits', defaultValue: []);
 
     return data.map((e) {
       return Habit(
-        id: e['id'],
-        name: e['name'],
-        streak: e['streak'],
-        completedToday: e['completedToday'],
+        id: e['id'] as String,
+        name: e['name'] as String,
+        streak: e['streak'] as int,
+        completedToday: e['completedToday'] as bool,
+        colorValue: e['colorValue'] as int? ??
+            Colors.blue.value, // fallback for old data
       );
     }).toList();
   }
 
+  /// Save habits to Hive
   static void saveHabits(List<Habit> habits) {
-    final List data = habits.map((h) {
-      return {
-        'id': h.id,
-        'name': h.name,
-        'streak': h.streak,
-        'completedToday': h.completedToday,
-      };
-    }).toList();
+    final data = habits
+        .map(
+          (h) => {
+            'id': h.id,
+            'name': h.name,
+            'streak': h.streak,
+            'completedToday': h.completedToday,
+            'colorValue': h.colorValue,
+          },
+        )
+        .toList();
 
-    _box.put('habits', data);
-    _box.put('lastDate', _today());
-  }
-
-  static void _checkDailyReset() {
-    final String today = _today();
-    final String? lastDate = _box.get('lastDate');
-
-    if (lastDate != today) {
-      final List data = _box.get('habits', defaultValue: []);
-
-      for (var h in data) {
-        h['completedToday'] = false;
-      }
-
-      _box.put('habits', data);
-      _box.put('lastDate', today);
-    }
-  }
-
-  static String _today() {
-    final now = DateTime.now();
-    return '${now.year}-${now.month}-${now.day}';
+    box.put('habits', data);
   }
 }
