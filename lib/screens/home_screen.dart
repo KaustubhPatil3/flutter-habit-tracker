@@ -23,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       habits.add(
         Habit(
-          id: DateTime.now().toString(),
+          id: DateTime.now().toIso8601String(),
           name: name,
         ),
       );
@@ -34,8 +34,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void toggleHabit(Habit habit) {
     setState(() {
       habit.completedToday = !habit.completedToday;
-      habit.streak += habit.completedToday ? 1 : -1;
-      if (habit.streak < 0) habit.streak = 0;
+
+      if (habit.completedToday) {
+        habit.streak += 1;
+      } else {
+        habit.streak -= 1;
+        if (habit.streak < 0) habit.streak = 0;
+      }
 
       HabitStorage.saveHabits(habits);
     });
@@ -56,7 +61,12 @@ class _HomeScreenState extends State<HomeScreen> {
         child: const Icon(Icons.add),
       ),
       body: habits.isEmpty
-          ? const Center(child: Text('No habits yet'))
+          ? const Center(
+              child: Text(
+                'No habits yet.\nTap + to add one.',
+                textAlign: TextAlign.center,
+              ),
+            )
           : ListView.builder(
               itemCount: habits.length,
               itemBuilder: (context, index) {
@@ -82,15 +92,20 @@ class AddHabitDialog extends StatelessWidget {
       title: const Text('New Habit'),
       content: TextField(
         controller: controller,
+        autofocus: true,
         decoration: const InputDecoration(
-          hintText: 'Habit name',
+          hintText: 'Enter habit name',
         ),
       ),
       actions: [
         TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('CANCEL'),
+        ),
+        ElevatedButton(
           onPressed: () {
-            if (controller.text.isNotEmpty) {
-              onAdd(controller.text);
+            if (controller.text.trim().isNotEmpty) {
+              onAdd(controller.text.trim());
               Navigator.pop(context);
             }
           },
