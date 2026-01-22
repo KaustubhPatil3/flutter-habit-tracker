@@ -13,25 +13,13 @@ class HabitTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 6,
-      ),
-      child: ListTile(
-        title: Text(
-          habit.name,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: () {
-            HabitStorage.archiveHabit(habit);
-          },
-        ),
-      ),
+    final total = HabitStorage.total(habit);
+
+    return ListTile(
+      leading: const Icon(Icons.track_changes),
+      title: Text(habit.name),
+      subtitle: Text("Completed: $total"),
+      trailing: const Icon(Icons.chevron_right),
     );
   }
 }

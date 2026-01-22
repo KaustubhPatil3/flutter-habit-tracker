@@ -1,44 +1,146 @@
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 import '../models/habit.dart';
 
 class HabitStorage {
-  static Box<Habit> get _box => Hive.box<Habit>('habits');
+  static final _box = Hive.box<Habit>('habits');
 
-  // Add habit
-  static Future<void> addHabit(Habit habit) async {
-    await _box.add(habit);
+  static Future update(Habit h, String newName) async {
+    h.name = newName;
+    await h.save();
   }
 
-  // Update habit
-  static Future<void> updateHabit(Habit habit) async {
-    await habit.save();
+  // ================= CRUD =================
+
+  static List<Habit> active() =>
+      _box.values.where((e) => !e.isArchived).toList();
+
+  static List<Habit> trash() => _box.values.where((e) => e.isArchived).toList();
+
+  static Future save(Habit h) async {
+    await _box.put(h.id, h);
   }
 
-  // Move to trash
-  static Future<void> archiveHabit(Habit habit) async {
-    habit.isArchived = true;
-    await habit.save();
+  static Future archive(Habit h) async {
+    h.isArchived = true;
+    await h.save();
   }
 
-  // Restore
-  static Future<void> restoreHabit(Habit habit) async {
-    habit.isArchived = false;
-    await habit.save();
+  static Future restore(Habit h) async {
+    h.isArchived = false;
+    await h.save();
   }
 
-  // Delete forever (FIXED)
-  static Future<void> deleteForever(Habit habit) async {
-    await habit.delete();
+  static Future delete(Habit h) async {
+    await h.delete();
   }
 
-  // Get active habits
-  static List<Habit> getActive() {
-    return _box.values.where((h) => !h.isArchived).toList();
+  // ================= TRACKING =================
+
+  static void toggleToday(Habit h) {
+    final today = _today();
+
+    if (h.completedDates.contains(today)) {
+      h.completedDates.remove(today);
+    } else {
+      h.completedDates.add(today);
+    }
+
+    h.save();
   }
 
-  // Get trashed habits
-  static List<Habit> getTrash() {
-    return _box.values.where((h) => h.isArchived).toList();
+  // ================= STATS =================
+
+  static int total(Habit h) => h.completedDates.length;
+
+  static int streak(Habit h) {
+    final d = _sorted(h);
+
+    int s = 0;
+    DateTime? prev;
+
+    for (final x in d) {
+      if (prev == null || prev!.difference(x).inDays == 1) {
+        s++;
+      } else {
+        break;
+      }
+
+      prev = x;
+    }
+
+    return s;
+  }
+
+  static int best(Habit h) {
+    final d = _sorted(h);
+
+    int best = 0, cur = 0;
+    DateTime? prev;
+
+    for (final x in d) {
+      if (prev == null || prev!.difference(x).inDays == 1) {
+        cur++;
+      } else {
+        cur = 1;
+      }
+
+      best = cur > best ? cur : best;
+      prev = x;
+    }
+
+    return best;
+  }
+
+  static double rate(Habit h) {
+    if (h.completedDates.isEmpty) return 0;
+
+    final start = DateTime.parse(h.completedDates.first);
+
+    final days = DateTime.now().difference(start).inDays + 1;
+
+    return h.completedDates.length / days;
+  }
+
+  // ================= GRAPH =================
+
+  static Map<String, int> monthly(Habit h) {
+    final map = <String, int>{};
+
+    for (final d in h.completedDates) {
+      if (d.length >= 7) {
+        final m = d.substring(0, 7); // yyyy-MM
+        map[m] = (map[m] ?? 0) + 1;
+      }
+    }
+
+    return map;
+  }
+
+  // ================= HELPERS =================
+
+  static String _today() {
+    final now = DateTime.now();
+
+    return "${now.year.toString().padLeft(4, '0')}-"
+        "${now.month.toString().padLeft(2, '0')}-"
+        "${now.day.toString().padLeft(2, '0')}";
+  }
+
+  static List<DateTime> _sorted(Habit h) {
+    final list = h.completedDates
+        .map((d) {
+          try {
+            return DateTime.parse(d);
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<DateTime>()
+        .toList();
+
+    list.sort((a, b) => b.compareTo(a));
+
+    return list;
   }
 }

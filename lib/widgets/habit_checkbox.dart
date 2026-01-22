@@ -1,37 +1,40 @@
 import 'package:flutter/material.dart';
 
-import '../models/habit.dart';
-import '../services/habit_storage.dart';
-
 class HabitCheckbox extends StatelessWidget {
-  final Habit habit;
-  final String date;
+  final bool checked;
+  final VoidCallback onTap;
 
   const HabitCheckbox({
     super.key,
-    required this.habit,
-    required this.date,
+    required this.checked,
+    required this.onTap,
   });
-
-  bool get _isDone {
-    return habit.completedDates.contains(date);
-  }
-
-  void _toggle() {
-    if (_isDone) {
-      habit.completedDates.remove(date);
-    } else {
-      habit.completedDates.add(date);
-    }
-
-    HabitStorage.updateHabit(habit);
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Checkbox(
-      value: _isDone,
-      onChanged: (_) => _toggle(),
+    return InkWell(
+      borderRadius: BorderRadius.circular(30),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: checked ? Colors.green : Colors.transparent,
+          border: Border.all(
+            color: Colors.green,
+            width: 2,
+          ),
+        ),
+        child: checked
+            ? const Icon(
+                Icons.check,
+                size: 18,
+                color: Colors.white,
+              )
+            : null,
+      ),
     );
   }
 }

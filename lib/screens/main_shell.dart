@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
+import '../models/habit.dart';
 
 import 'home_screen.dart';
+import 'stats_screen.dart';
 import 'calendar_screen.dart';
-import 'trash_screen.dart';
+import 'settings_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -12,40 +16,54 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _index = 0;
-
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    CalendarScreen(),
-    TrashScreen(),
-  ];
+  int index = 0;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_index],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        onTap: (i) {
-          setState(() {
-            _index = i;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+    return ValueListenableBuilder(
+      valueListenable: Hive.box<Habit>('habits').listenable(),
+      builder: (context, box, _) {
+        final habits = box.values.toList();
+
+        final screens = [
+          const HomeScreen(),
+
+          // ✅ PASS HABITS HERE
+          CalendarScreen(habits: habits),
+
+          const StatsScreen(),
+
+          const SettingsScreen(),
+        ];
+
+        return Scaffold(
+          body: screens[index],
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: index,
+            onDestinationSelected: (i) {
+              setState(() => index = i);
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home),
+                label: "Home",
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.calendar_month),
+                label: "Calendar",
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.bar_chart),
+                label: "Stats",
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.settings),
+                label: "Settings",
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month),
-            label: 'Calendar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.delete),
-            label: 'Trash',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
