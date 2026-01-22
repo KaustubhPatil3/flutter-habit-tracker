@@ -1,22 +1,30 @@
-name: habit
-description: A habit tracker app
+name: habit_tracker
+description: A personal habit tracker app built with Flutter & Hive
+publish_to: 'none'
+
+version: 1.0.0+1
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
+
 
 dependencies:
   flutter:
     sdk: flutter
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+  uuid: ^4.3.3
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  build_runner: ^2.4.6
-  hive_generator: ^2.0.1
 
-analyzer: ^10.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.13
+
+
+
 
 flutter:
   uses-material-design: true

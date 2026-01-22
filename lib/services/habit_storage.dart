@@ -1,40 +1,44 @@
-import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
 import '../models/habit.dart';
-import 'package:flutter/material.dart';
 
 class HabitStorage {
-  static final Box box = Hive.box('habitsBox');
+  static Box<Habit> get _box => Hive.box<Habit>('habits');
 
-  /// Load habits from Hive
-  static List<Habit> loadHabits() {
-    final List data = box.get('habits', defaultValue: []);
-
-    return data.map((e) {
-      return Habit(
-        id: e['id'] as String,
-        name: e['name'] as String,
-        streak: e['streak'] as int,
-        completedToday: e['completedToday'] as bool,
-        colorValue: e['colorValue'] as int? ??
-            Colors.blue.value, // fallback for old data
-      );
-    }).toList();
+  // Add habit
+  static Future<void> addHabit(Habit habit) async {
+    await _box.add(habit);
   }
 
-  /// Save habits to Hive
-  static void saveHabits(List<Habit> habits) {
-    final data = habits
-        .map(
-          (h) => {
-            'id': h.id,
-            'name': h.name,
-            'streak': h.streak,
-            'completedToday': h.completedToday,
-            'colorValue': h.colorValue,
-          },
-        )
-        .toList();
+  // Update habit
+  static Future<void> updateHabit(Habit habit) async {
+    await habit.save();
+  }
 
-    box.put('habits', data);
+  // Move to trash
+  static Future<void> archiveHabit(Habit habit) async {
+    habit.isArchived = true;
+    await habit.save();
+  }
+
+  // Restore
+  static Future<void> restoreHabit(Habit habit) async {
+    habit.isArchived = false;
+    await habit.save();
+  }
+
+  // Delete forever (FIXED)
+  static Future<void> deleteForever(Habit habit) async {
+    await habit.delete();
+  }
+
+  // Get active habits
+  static List<Habit> getActive() {
+    return _box.values.where((h) => !h.isArchived).toList();
+  }
+
+  // Get trashed habits
+  static List<Habit> getTrash() {
+    return _box.values.where((h) => h.isArchived).toList();
   }
 }

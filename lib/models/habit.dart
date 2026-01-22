@@ -1,15 +1,25 @@
-class Habit {
-  final String id;
-  final String name;
-  int streak;
-  bool completedToday;
-  final int colorValue;
+import 'package:hive/hive.dart';
+
+part 'habit.g.dart';
+
+@HiveType(typeId: 0)
+class Habit extends HiveObject {
+  @HiveField(0)
+  String id;
+
+  @HiveField(1)
+  String name;
+
+  @HiveField(2)
+  List<String> completedDates;
+
+  @HiveField(3)
+  bool isArchived;
 
   Habit({
     required this.id,
     required this.name,
-    this.streak = 0,
-    this.completedToday = false,
-    required this.colorValue,
-  });
+    List<String>? completedDates,
+    this.isArchived = false,
+  }) : completedDates = completedDates ?? [];
 }
