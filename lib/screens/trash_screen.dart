@@ -12,7 +12,6 @@ class TrashScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Trash"),
-        centerTitle: true,
       ),
       body: ValueListenableBuilder(
         valueListenable: Hive.box<Habit>('habits').listenable(),
@@ -33,35 +32,33 @@ class TrashScreen extends StatelessWidget {
               return Card(
                 margin: const EdgeInsets.all(10),
                 child: ListTile(
-                  leading: const Icon(
-                    Icons.delete_outline,
-                  ),
+                  leading: const Icon(Icons.delete_outline),
                   title: Text(h.name),
+                  subtitle: Text(
+                    "Completed: ${h.completedDates.length}",
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Restore
+                      // ✅ RESTORE
                       IconButton(
                         icon: const Icon(
                           Icons.restore,
                           color: Colors.green,
                         ),
-                        onPressed: () {
-                          HabitStorage.restore(h);
+                        onPressed: () async {
+                          await HabitStorage.restore(h);
                         },
                       ),
 
-                      // Delete forever
+                      // ❌ DELETE FOREVER
                       IconButton(
                         icon: const Icon(
                           Icons.close,
                           color: Colors.red,
                         ),
                         onPressed: () {
-                          _confirmDelete(
-                            context,
-                            h,
-                          );
+                          _confirmDelete(context, h);
                         },
                       ),
                     ],
@@ -75,30 +72,23 @@ class TrashScreen extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(
-    BuildContext context,
-    Habit h,
-  ) {
+  void _confirmDelete(BuildContext context, Habit h) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Delete Forever?"),
-        content: const Text(
-          "This habit will be removed permanently.",
-        ),
+        content: const Text("This cannot be undone."),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text("Cancel"),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            onPressed: () {
-              HabitStorage.delete(h);
+            onPressed: () async {
+              await HabitStorage.delete(h);
 
               Navigator.pop(context);
             },

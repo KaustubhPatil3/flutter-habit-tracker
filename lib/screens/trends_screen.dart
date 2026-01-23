@@ -6,23 +6,18 @@ import '../models/habit.dart';
 class TrendsScreen extends StatelessWidget {
   const TrendsScreen({super.key});
 
-  // ================= DAILY MAP =================
-
   Map<String, int> _dailyCount(List<Habit> habits) {
     final map = <String, int>{};
 
     for (var h in habits) {
       for (var d in h.completedDates) {
         final key = d.substring(0, 10);
-
         map[key] = (map[key] ?? 0) + 1;
       }
     }
 
     return map;
   }
-
-  // ================= COLOR =================
 
   Color _color(int count) {
     if (count == 0) return Colors.grey.shade300;
@@ -31,8 +26,6 @@ class TrendsScreen extends StatelessWidget {
     if (count <= 4) return Colors.green.shade600;
     return Colors.green.shade800;
   }
-
-  // ================= UI =================
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +36,9 @@ class TrendsScreen extends StatelessWidget {
       body: ValueListenableBuilder(
         valueListenable: Hive.box<Habit>('habits').listenable(),
         builder: (_, box, __) {
-          final habits = box.values.toList();
+          // ✅ FILTER ARCHIVED
+          final habits = box.values.where((h) => !h.isArchived).toList();
+
           final map = _dailyCount(habits);
 
           final today = DateTime.now();
@@ -61,7 +56,6 @@ class TrendsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ===== HEADER =====
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -80,10 +74,7 @@ class TrendsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 12),
-
-                // ===== LEGEND =====
                 Row(
                   children: [
                     _legend(0),
@@ -93,10 +84,7 @@ class TrendsScreen extends StatelessWidget {
                     _legend(5),
                   ],
                 ),
-
                 const SizedBox(height: 12),
-
-                // ===== GRID =====
                 Expanded(
                   child: GridView.builder(
                     itemCount: days.length,
@@ -132,8 +120,6 @@ class TrendsScreen extends StatelessWidget {
       ),
     );
   }
-
-  // ================= LEGEND =================
 
   Widget _legend(int count) {
     return Padding(

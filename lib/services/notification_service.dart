@@ -5,7 +5,6 @@ import 'package:timezone/timezone.dart' as tz;
 class NotificationService {
   static final _notifications = FlutterLocalNotificationsPlugin();
 
-  // Init (call in main.dart)
   static Future init() async {
     tz.initializeTimeZones();
 
@@ -13,14 +12,15 @@ class NotificationService {
       '@mipmap/ic_launcher',
     );
 
-    const settings = InitializationSettings(android: android);
+    const settings = InitializationSettings(
+      android: android,
+    );
 
     await _notifications.initialize(settings);
   }
 
-  // ================= DAILY REMINDER =================
-
-  static Future daily() async {
+  // DAILY REMINDER
+  static Future scheduleDaily() async {
     const android = AndroidNotificationDetails(
       'daily_channel',
       'Daily Reminder',
@@ -45,8 +45,6 @@ class NotificationService {
     );
   }
 
-  // ================= TIME HELPER =================
-
   static tz.TZDateTime _next9PM() {
     final now = tz.TZDateTime.now(tz.local);
 
@@ -60,9 +58,7 @@ class NotificationService {
     );
 
     if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(
-        const Duration(days: 1),
-      );
+      scheduled = scheduled.add(const Duration(days: 1));
     }
 
     return scheduled;

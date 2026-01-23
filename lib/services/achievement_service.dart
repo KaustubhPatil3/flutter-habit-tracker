@@ -2,19 +2,29 @@ import '../models/habit.dart';
 import 'habit_storage.dart';
 
 class AchievementService {
-  static List<String> get(Habit h) {
-    final list = <String>[];
+  /// Returns earned badges for a habit
+  static List<String> getBadges(Habit habit) {
+    final List<String> badges = [];
 
-    final total = HabitStorage.total(h);
-    final streak = HabitStorage.streak(h);
+    final total = HabitStorage.total(habit);
+    final streak = HabitStorage.streak(habit);
+    final best = HabitStorage.best(habit);
 
-    if (total >= 10) list.add("Beginner 💪");
-    if (total >= 50) list.add("Consistent 🔥");
-    if (total >= 100) list.add("Master 🏆");
+    // Starter
+    if (total >= 1) badges.add("Starter 🟢");
 
-    if (streak >= 7) list.add("7 Day Streak ⚡");
-    if (streak >= 30) list.add("30 Day Legend 👑");
+    // Streaks
+    if (streak >= 7) badges.add("7 Day Streak 🔥");
+    if (streak >= 30) badges.add("30 Day Streak 👑");
 
-    return list;
+    // Best Streak
+    if (best >= 15) badges.add("Champion 🏆");
+    if (best >= 50) badges.add("Legend ⭐");
+
+    // Dedication
+    if (total >= 100) badges.add("Century Club 💯");
+    if (total >= 500) badges.add("Ultra Dedicated 🚀");
+
+    return badges;
   }
 }

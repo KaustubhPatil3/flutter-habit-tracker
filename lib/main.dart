@@ -1,49 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:provider/provider.dart';
 
 import 'models/habit.dart';
-import 'screens/main_shell.dart';
-import 'services/theme_service.dart';
 
-void main() async {
+import 'providers/theme_provider.dart';
+import 'services/notification_service.dart';
+
+import 'screens/main_shell.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // INIT HIVE
   await Hive.initFlutter();
-  Hive.registerAdapter(HabitAdapter());
-  await Hive.openBox<Habit>('habits');
 
-  await ThemeService.init();
+  // REGISTER ADAPTER
+  if (!Hive.isAdapterRegistered(0)) {
+    Hive.registerAdapter(HabitAdapter());
+  }
+
+  // OPEN BOX
+  await Hive.openBox<Habit>('habits');
+  await Hive.openBox('diary'); // ✅ ADD THIS
+
+  await Hive.openBox('timetable'); // IMPORTANT
+
+  // INIT NOTIFICATIONS
+  await NotificationService.init();
 
   runApp(const MyApp());
 }
+
+// ================= APP ROOT =================
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: ThemeService.box.listenable(),
-      builder: (_, box, __) {
-        final isDark = box.get('dark', defaultValue: true);
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: Consumer<ThemeProvider>(
+        builder: (_, theme, __) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
 
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'Habit Tracker',
-          themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-          theme: ThemeData(
-            brightness: Brightness.light,
-            useMaterial3: true,
-            colorSchemeSeed: Colors.green,
-          ),
-          darkTheme: ThemeData(
-            brightness: Brightness.dark,
-            useMaterial3: true,
-            colorSchemeSeed: Colors.green,
-          ),
-          home: const MainShell(),
-        );
-      },
+            title: 'Habit Tracker',
+
+            theme: theme.lightTheme,
+            darkTheme: theme.darkTheme,
+
+            themeMode: theme.isDark ? ThemeMode.dark : ThemeMode.light,
+
+            home: const MainShell(), // ✅ MUST BE MainShell
+          );
+        },
+      ),
     );
   }
 }

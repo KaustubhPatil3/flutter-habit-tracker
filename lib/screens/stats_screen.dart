@@ -29,7 +29,8 @@ class StatsScreen extends StatelessWidget {
       body: ValueListenableBuilder(
         valueListenable: Hive.box<Habit>('habits').listenable(),
         builder: (_, box, __) {
-          final habits = box.values.toList();
+          // ✅ ONLY ACTIVE HABITS
+          final habits = box.values.where((h) => !h.isArchived).toList();
 
           if (habits.isEmpty) {
             return const Center(
@@ -45,7 +46,7 @@ class StatsScreen extends StatelessWidget {
           return GridView.builder(
             padding: const EdgeInsets.all(16),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, // 2 per row
+              crossAxisCount: 2,
               crossAxisSpacing: 14,
               mainAxisSpacing: 14,
               childAspectRatio: 1,

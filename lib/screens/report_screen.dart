@@ -21,28 +21,21 @@ class ReportScreen extends StatelessWidget {
 
           if (habits.isEmpty) {
             return const Center(
-              child: Text("No data available"),
+              child: Text("No data"),
             );
           }
 
           int totalDone = 0;
-          int totalTarget = habits.length * 30;
 
           for (var h in habits) {
             totalDone += HabitStorage.total(h);
           }
 
-          double percent = totalTarget == 0 ? 0 : totalDone / totalTarget;
-
           return ListView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             children: [
-              // ================= SUMMARY CARD =================
-              _summaryCard(totalDone, totalTarget, percent),
-
+              _summary(totalDone, habits.length),
               const SizedBox(height: 20),
-
-              // ================= HABITS =================
               const Text(
                 "Habit Performance",
                 style: TextStyle(
@@ -50,10 +43,8 @@ class ReportScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 12),
-
-              ...habits.map((h) => _habitCard(h)).toList(),
+              ...habits.map(_habitCard),
             ],
           );
         },
@@ -61,16 +52,13 @@ class ReportScreen extends StatelessWidget {
     );
   }
 
-  // ===================================================
-  // SUMMARY CARD
-  // ===================================================
+  // SUMMARY
+  Widget _summary(int done, int totalHabits) {
+    final target = totalHabits * 30;
 
-  Widget _summaryCard(int done, int target, double percent) {
+    final percent = target == 0 ? 0 : done / target;
+
     return Card(
-      elevation: 5,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -82,74 +70,53 @@ class ReportScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 15),
-            Text(
-              "$done / $target Completed",
-              style: const TextStyle(fontSize: 16),
-            ),
+            const SizedBox(height: 10),
+            Text("$done / $target Completed"),
             const SizedBox(height: 12),
             LinearProgressIndicator(
-              value: percent.clamp(0, 1),
+              value: percent.clamp(0.0, 1.0).toDouble(),
               minHeight: 10,
               borderRadius: BorderRadius.circular(10),
             ),
             const SizedBox(height: 10),
-            Text(
-              "${(percent * 100).toStringAsFixed(1)} %",
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text("${(percent * 100).toStringAsFixed(1)}%"),
           ],
         ),
       ),
     );
   }
 
-  // ===================================================
   // HABIT CARD
-  // ===================================================
-
   Widget _habitCard(Habit h) {
     final total = HabitStorage.total(h);
     final streak = HabitStorage.streak(h);
     final best = HabitStorage.best(h);
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 14),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
+      margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
-        title: Text(
-          h.name,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+        title: Text(h.name),
+        subtitle: Row(
+          children: [
+            _mini("🔥", streak),
+            _mini("🏆", best),
+            _mini("✅", total),
+          ],
         ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _mini("🔥", streak),
-              _mini("🏆", best),
-              _mini("✅", total),
-            ],
-          ),
-        ),
-        trailing: const Icon(Icons.chevron_right),
       ),
     );
   }
 
-  Widget _mini(String icon, int value) {
-    return Row(
-      children: [
-        Text(icon),
-        const SizedBox(width: 4),
-        Text(value.toString()),
-      ],
+  Widget _mini(String icon, int v) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: Row(
+        children: [
+          Text(icon),
+          const SizedBox(width: 4),
+          Text(v.toString()),
+        ],
+      ),
     );
   }
 }

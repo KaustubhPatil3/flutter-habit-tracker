@@ -1,30 +1,51 @@
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
 import '../models/habit.dart';
-import '../SERVICES/habit_storage.dart';
+import '../services/achievement_service.dart';
 
-class AchievementService {
-  /// Returns earned badges for a habit
-  static List<String> getBadges(Habit habit) {
-    final List<String> badges = [];
+class AchievementsScreen extends StatelessWidget {
+  const AchievementsScreen({super.key});
 
-    final total = HabitStorage.total(habit);
-    final streak = HabitStorage.streak(habit);
-    final best = HabitStorage.best(habit);
+  @override
+  Widget build(BuildContext context) {
+    final box = Hive.box<Habit>('habits');
+    final habits = box.values.toList();
 
-    // Beginner
-    if (total >= 1) badges.add("Starter");
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Achievements"),
+      ),
+      body: habits.isEmpty
+          ? const Center(
+              child: Text("No habits yet"),
+            )
+          : ListView.builder(
+              itemCount: habits.length,
+              itemBuilder: (context, index) {
+                final habit = habits[index];
+                final badges = AchievementService.getBadges(habit);
 
-    // Consistency
-    if (streak >= 7) badges.add("7 Day Streak");
-    if (streak >= 30) badges.add("30 Day Streak");
-
-    // Champion
-    if (best >= 15) badges.add("Champion");
-    if (best >= 50) badges.add("Legend");
-
-    // Dedication
-    if (total >= 100) badges.add("Century Club");
-    if (total >= 500) badges.add("Ultra Dedicated");
-
-    return badges;
+                return Card(
+                  margin: const EdgeInsets.all(8),
+                  child: ListTile(
+                    title: Text(habit.name),
+                    subtitle: badges.isEmpty
+                        ? const Text("No badges yet")
+                        : Wrap(
+                            spacing: 6,
+                            children: badges
+                                .map(
+                                  (b) => Chip(
+                                    label: Text(b),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                  ),
+                );
+              },
+            ),
+    );
   }
 }

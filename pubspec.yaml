@@ -23,7 +23,9 @@ dependencies:
 
   # Notifications
   flutter_local_notifications: ^17.0.0
-
+ 
+  timezone: ^0.9.2 
+  
   # PDF Export
   pdf: ^3.10.7
   path_provider: ^2.1.2
@@ -35,8 +37,12 @@ dependencies:
   table_calendar: ^3.0.9
 
   # Utils
+  shared_preferences: ^2.2.2
   intl: ^0.19.0
 
+  image_picker: ^1.0.7
+  video_player: ^2.8.2
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
