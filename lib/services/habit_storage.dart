@@ -1,5 +1,4 @@
 import 'package:hive/hive.dart';
-
 import '../models/habit.dart';
 
 class HabitStorage {
@@ -21,21 +20,32 @@ class HabitStorage {
 
   static Future archive(Habit h) async {
     h.isArchived = true;
-    await h.save(); // ✅ keep history
+    await h.save();
   }
 
   static Future restore(Habit h) async {
     h.isArchived = false;
-    await h.save(); // ✅ restore history
+    await h.save();
   }
 
   static Future delete(Habit h) async {
-    await h.delete(); // ❌ permanent delete
+    await h.delete();
   }
 
-  // ================= TRACKING =================
+  // ================= DATE SYSTEM (SINGLE SOURCE) =================
 
-  static void toggleToday(Habit h) {
+  static String _today() {
+    final now = DateTime.now();
+    return "${now.year.toString().padLeft(4, '0')}-"
+        "${now.month.toString().padLeft(2, '0')}-"
+        "${now.day.toString().padLeft(2, '0')}";
+  }
+
+  static bool isDoneToday(Habit h) {
+    return h.completedDates.contains(_today());
+  }
+
+  static Future toggleToday(Habit h) async {
     final today = _today();
 
     if (h.completedDates.contains(today)) {
@@ -44,7 +54,7 @@ class HabitStorage {
       h.completedDates.add(today);
     }
 
-    h.save();
+    await h.save();
   }
 
   // ================= STATS =================
@@ -65,7 +75,6 @@ class HabitStorage {
       } else {
         break;
       }
-
       prev = d;
     }
 
@@ -86,32 +95,26 @@ class HabitStorage {
         cur = 1;
       }
 
-      best = cur > best ? cur : best;
+      if (cur > best) best = cur;
       prev = d;
     }
 
     return best;
   }
 
-  static double rate(Habit h) {
+  static double consistencyRate(Habit h) {
     if (h.completedDates.isEmpty) return 0;
 
-    final start = DateTime.parse(h.completedDates.first);
+    final sorted = _sorted(h);
+    if (sorted.isEmpty) return 0;
 
+    final start = sorted.last;
     final days = DateTime.now().difference(start).inDays + 1;
 
-    return h.completedDates.length / days;
+    return (h.completedDates.length / days).clamp(0.0, 1.0);
   }
 
   // ================= HELPERS =================
-
-  static String _today() {
-    final now = DateTime.now();
-
-    return "${now.year.toString().padLeft(4, '0')}-"
-        "${now.month.toString().padLeft(2, '0')}-"
-        "${now.day.toString().padLeft(2, '0')}";
-  }
 
   static List<DateTime> _sorted(Habit h) {
     final list = h.completedDates

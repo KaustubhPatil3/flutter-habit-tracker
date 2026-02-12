@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
 import '../models/habit.dart';
 import '../services/habit_storage.dart';
 
@@ -20,103 +18,81 @@ class HabitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-    final doneToday = habit.completedDates.contains(today);
-
-    // ✅ FIX: use HabitStorage
-    final total = HabitStorage.total(habit);
+    final doneToday = HabitStorage.isDoneToday(habit);
     final streak = HabitStorage.streak(habit);
-
-    final progress = total == 0 ? 0.0 : habit.completedDates.length / total;
+    final total = HabitStorage.total(habit);
+    final progress = HabitStorage.consistencyRate(habit);
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        padding: const EdgeInsets.all(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        margin: const EdgeInsets.only(bottom: 18),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: LinearGradient(
-            colors: [
-              Colors.grey.shade900,
-              Colors.grey.shade800,
-            ],
-          ),
+          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF162235),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+              blurRadius: 25,
+              offset: const Offset(0, 15),
             ),
           ],
+          border: Border.all(
+            color: doneToday
+                ? const Color(0xFF4F8CFF).withOpacity(0.4)
+                : Colors.white.withOpacity(0.04),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ================= TOP ROW =================
-
             Row(
               children: [
-                // CHECK BUTTON
-                InkWell(
-                  borderRadius: BorderRadius.circular(50),
+                GestureDetector(
                   onTap: () async {
-                    final today =
-                        DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-                    if (habit.completedDates.contains(today)) {
-                      habit.completedDates.remove(today);
-                    } else {
-                      habit.completedDates.add(today);
-                    }
-
-                    await habit.save();
+                    await HabitStorage.toggleToday(habit);
                   },
-                  child: Container(
-                    width: 40,
-                    height: 40,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: doneToday ? Colors.green : Colors.grey.shade700,
                       shape: BoxShape.circle,
+                      gradient: doneToday
+                          ? const LinearGradient(
+                              colors: [
+                                Color(0xFF4F8CFF),
+                                Color(0xFF6C63FF),
+                              ],
+                            )
+                          : null,
+                      color: doneToday ? null : Colors.white.withOpacity(0.06),
                     ),
                     child: Icon(
-                      Icons.check,
-                      color: doneToday ? Colors.white : Colors.grey.shade400,
+                      doneToday ? Icons.check : Icons.circle_outlined,
+                      color: doneToday ? Colors.white : Colors.white54,
                     ),
                   ),
                 ),
-
-                const SizedBox(width: 12),
-
-                // TITLE
+                const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     habit.name,
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
                       color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-
-                // MENU
                 PopupMenuButton(
-                  icon: const Icon(
-                    Icons.more_vert,
-                    color: Colors.white70,
-                  ),
+                  icon: const Icon(Icons.more_vert, color: Colors.white54),
                   itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 0,
-                      child: Text("Edit"),
-                    ),
-                    PopupMenuItem(
-                      value: 1,
-                      child: Text("Delete"),
-                    ),
+                    PopupMenuItem(value: 0, child: Text("Edit")),
+                    PopupMenuItem(value: 1, child: Text("Archive")),
                   ],
                   onSelected: (v) {
                     if (v == 0) onEdit();
@@ -126,56 +102,44 @@ class HabitCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 18),
 
             // ================= STATS =================
-
             Row(
               children: [
-                _Stat(
-                  icon: "🔥",
-                  label: "Streak",
-                  value: streak.toString(), // ✅ FIXED
-                ),
+                _stat("🔥", "Streak", streak.toString()),
                 const SizedBox(width: 20),
-                _Stat(
-                  icon: "✅",
-                  label: "Done",
-                  value: habit.completedDates.length.toString(),
-                ),
+                _stat("✅", "Done", total.toString()),
                 const Spacer(),
                 if (doneToday)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Text(
                       "Today ✓",
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
+                        color: Colors.white70,
+                        fontSize: 11,
                       ),
                     ),
                   ),
               ],
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
 
             // ================= PROGRESS =================
-
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: LinearProgressIndicator(
                 value: progress,
-                minHeight: 7,
-                backgroundColor: Colors.grey.shade700,
-                valueColor: const AlwaysStoppedAnimation(Colors.green),
+                minHeight: 8,
+                backgroundColor: Colors.white.withOpacity(0.05),
+                valueColor: const AlwaysStoppedAnimation(Color(0xFF4F8CFF)),
               ),
             ),
           ],
@@ -183,23 +147,8 @@ class HabitCard extends StatelessWidget {
       ),
     );
   }
-}
 
-// ================= STAT WIDGET =================
-
-class _Stat extends StatelessWidget {
-  final String icon;
-  final String label;
-  final String value;
-
-  const _Stat({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _stat(String icon, String label, String value) {
     return Row(
       children: [
         Text(icon, style: const TextStyle(fontSize: 16)),
@@ -209,16 +158,16 @@ class _Stat extends StatelessWidget {
           children: [
             Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
+                color: Colors.white54,
                 fontSize: 11,
-                color: Colors.grey.shade400,
               ),
             ),
             Text(
               value,
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
                 color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],

@@ -7,10 +7,7 @@ import '../services/habit_storage.dart';
 class HabitSheet extends StatefulWidget {
   final Habit? habit;
 
-  const HabitSheet({
-    super.key,
-    this.habit,
-  });
+  const HabitSheet({super.key, this.habit});
 
   @override
   State<HabitSheet> createState() => _HabitSheetState();
@@ -18,17 +15,13 @@ class HabitSheet extends StatefulWidget {
 
 class _HabitSheetState extends State<HabitSheet> {
   final _formKey = GlobalKey<FormState>();
-
   late TextEditingController _nameController;
-
   bool _isEdit = false;
 
   @override
   void initState() {
     super.initState();
-
     _isEdit = widget.habit != null;
-
     _nameController = TextEditingController(text: widget.habit?.name ?? '');
   }
 
@@ -38,37 +31,25 @@ class _HabitSheetState extends State<HabitSheet> {
     super.dispose();
   }
 
-  // ================= SAVE =================
-
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     final name = _nameController.text.trim();
 
     if (_isEdit) {
-      // Update
       final h = widget.habit!;
       h.name = name;
-
       await HabitStorage.save(h);
     } else {
-      // Create
-      final id = const Uuid().v4();
-
       final habit = Habit(
-        id: id,
+        id: const Uuid().v4(),
         name: name,
-        completedDates: [],
-        isArchived: false,
       );
-
       await HabitStorage.save(habit);
     }
 
     if (mounted) Navigator.pop(context);
   }
-
-  // ================= UI =================
 
   @override
   Widget build(BuildContext context) {
@@ -77,96 +58,78 @@ class _HabitSheetState extends State<HabitSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
       child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(
+        decoration: const BoxDecoration(
+          color: Color(0xFF111827),
+          borderRadius: BorderRadius.vertical(
             top: Radius.circular(28),
           ),
         ),
-        padding: const EdgeInsets.fromLTRB(
-          20,
-          24,
-          20,
-          24,
-        ),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ================= DRAG HANDLE =================
-
               Container(
                 width: 45,
                 height: 5,
-                margin: const EdgeInsets.only(bottom: 18),
+                margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade400,
+                  color: Colors.white24,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-
-              // ================= TITLE =================
-
               Text(
-                _isEdit ? "Edit Habit" : "New Habit",
+                _isEdit ? "Edit Habit" : "Create New Habit",
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-
-              const SizedBox(height: 18),
-
-              // ================= INPUT =================
-
+              const SizedBox(height: 24),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
                   labelText: "Habit Name",
-                  prefixIcon: Icon(Icons.edit),
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.05),
+                  prefixIcon: const Icon(Icons.edit, color: Colors.white70),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
-                textCapitalization: TextCapitalization.sentences,
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
                     return "Enter habit name";
                   }
-
                   if (v.trim().length < 2) {
                     return "Too short";
                   }
-
                   return null;
                 },
               ),
-
-              const SizedBox(height: 22),
-
-              // ================= BUTTON =================
-
+              const SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: Icon(
-                    _isEdit ? Icons.save : Icons.add,
-                  ),
-                  label: Text(
-                    _isEdit ? "Save Changes" : "Create Habit",
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
+                child: ElevatedButton(
                   onPressed: _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4F8CFF),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    _isEdit ? "Save Changes" : "Create Habit",
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
-
-              const SizedBox(height: 12),
             ],
           ),
         ),

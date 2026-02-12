@@ -12,28 +12,39 @@ class HabitCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(30),
+    return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 28,
-        height: 28,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        width: 30,
+        height: 30,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: checked ? Colors.green : Colors.transparent,
+          color: checked ? const Color(0xFF4F8CFF) : Colors.transparent,
           border: Border.all(
-            color: Colors.green,
+            color: checked ? const Color(0xFF4F8CFF) : Colors.white24,
             width: 2,
           ),
+          boxShadow: checked
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF4F8CFF).withOpacity(0.4),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : [],
         ),
-        child: checked
-            ? const Icon(
-                Icons.check,
-                size: 18,
-                color: Colors.white,
-              )
-            : null,
+        child: AnimatedScale(
+          scale: checked ? 1 : 0,
+          duration: const Duration(milliseconds: 200),
+          child: const Icon(
+            Icons.check,
+            size: 18,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }
