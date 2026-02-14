@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import '../models/habit.dart';
 import '../services/habit_storage.dart';
@@ -11,6 +12,27 @@ class ReportScreen extends StatelessWidget {
   static const bgColor = Color(0xFF0B1220);
   static const cardColor = Color(0xFF162235);
   static const accent = Color(0xFF4F8CFF);
+
+  Map<String, int> _last7DaysTotals(List<Habit> habits) {
+    final map = <String, int>{};
+    final today = DateTime.now();
+
+    for (int i = 6; i >= 0; i--) {
+      final date = today.subtract(Duration(days: i));
+      final key = DateFormat('yyyy-MM-dd').format(date);
+
+      int count = 0;
+      for (var h in habits) {
+        if (h.completedDates.contains(key)) {
+          count++;
+        }
+      }
+
+      map[key] = count;
+    }
+
+    return map;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,28 +73,156 @@ class ReportScreen extends StatelessWidget {
             }
           }
 
-          final bestHabit = habits.reduce(
-              (a, b) => HabitStorage.best(a) > HabitStorage.best(b) ? a : b);
+          final weeklyData = _last7DaysTotals(habits);
+          final weeklyValues = weeklyData.values.toList();
+
+          final sortedHabits = [...habits]..sort(
+              (a, b) => HabitStorage.total(b).compareTo(HabitStorage.total(a)));
 
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              _monthlySummary(totalDone, habits.length),
-              const SizedBox(height: 20),
-              _todaySummary(doneToday, habits.length),
-              const SizedBox(height: 20),
-              _topPerformer(bestHabit),
-              const SizedBox(height: 30),
-              const Text(
-                "Habit Breakdown",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              // ===== TODAY SUMMARY =====
+              _card(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Today",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      "$doneToday / ${habits.length} completed",
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              ...habits.map(_habitCard),
+
+              const SizedBox(height: 20),
+
+              // ===== WEEKLY BAR CHART =====
+              _card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Last 7 Days",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 180,
+                      child: BarChart(
+                        BarChartData(
+                          gridData: FlGridData(show: false),
+                          borderData: FlBorderData(show: false),
+                          titlesData: FlTitlesData(
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            topTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget: (value, meta) {
+                                  const labels = [
+                                    "M",
+                                    "T",
+                                    "W",
+                                    "T",
+                                    "F",
+                                    "S",
+                                    "S"
+                                  ];
+                                  return Text(
+                                    labels[value.toInt()],
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          barGroups: List.generate(
+                            weeklyValues.length,
+                            (i) => BarChartGroupData(
+                              x: i,
+                              barRods: [
+                                BarChartRodData(
+                                  toY: weeklyValues[i].toDouble(),
+                                  color: accent,
+                                  width: 18,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ===== HABIT RANKING =====
+              _card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Habit Ranking",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 16),
+                    ...sortedHabits.take(5).map((h) {
+                      final total = HabitStorage.total(h);
+
+                      final max = sortedHabits
+                          .map((e) => HabitStorage.total(e))
+                          .reduce((a, b) => a > b ? a : b);
+
+                      final double percent = max == 0 ? 0.0 : total / max;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              h.name,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            LinearProgressIndicator(
+                              value: percent,
+                              backgroundColor: Colors.white12,
+                              valueColor: const AlwaysStoppedAnimation(accent),
+                              minHeight: 8,
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 30),
             ],
           );
         },
@@ -80,170 +230,14 @@ class ReportScreen extends StatelessWidget {
     );
   }
 
-  // ================= MONTHLY =================
-
-  Widget _monthlySummary(int done, int totalHabits) {
-    final target = totalHabits * 30;
-    final percent = target == 0 ? 0 : done / target;
-
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Monthly Completion",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "$done / $target completions",
-            style: const TextStyle(color: Colors.white70),
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: percent.clamp(0.0, 1.0) as double,
-              minHeight: 10,
-              backgroundColor: Colors.white12,
-              valueColor: const AlwaysStoppedAnimation(accent),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            "${(percent * 100).toStringAsFixed(1)}%",
-            style: const TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ================= TODAY =================
-
-  Widget _todaySummary(int doneToday, int totalHabits) {
-    return _card(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            "Today",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          Text(
-            "$doneToday / $totalHabits completed",
-            style: const TextStyle(
-              color: Colors.white70,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ================= TOP PERFORMER =================
-
-  Widget _topPerformer(Habit habit) {
-    final best = HabitStorage.best(habit);
-
-    return _card(
-      child: Row(
-        children: [
-          const Text("🏆", style: TextStyle(fontSize: 28)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              habit.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Text(
-            "Best: $best",
-            style: const TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w600,
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  // ================= HABIT CARD =================
-
-  Widget _habitCard(Habit h) {
-    final total = HabitStorage.total(h);
-    final streak = HabitStorage.streak(h);
-    final best = HabitStorage.best(h);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: _card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              h.name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _mini("🔥 Streak", streak),
-                _mini("🏆 Best", best),
-                _mini("✅ Total", total),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ================= CARD BASE =================
-
   Widget _card({required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-        ),
       ),
       child: child,
-    );
-  }
-
-  Widget _mini(String label, int value) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 18),
-      child: Text(
-        "$label: $value",
-        style: const TextStyle(
-          color: Colors.white70,
-          fontSize: 13,
-        ),
-      ),
     );
   }
 }

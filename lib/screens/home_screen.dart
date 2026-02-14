@@ -19,16 +19,53 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   FilterType _filter = FilterType.all;
+  final Set<Habit> _selected = {};
+
+  bool get _isSelecting => _selected.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0B1220),
+
+      // ================= APP BAR =================
       appBar: AppBar(
         backgroundColor: const Color(0xFF0B1220),
         elevation: 0,
+        centerTitle: false,
+        title: Text(
+          _isSelecting ? "${_selected.length} selected" : "Today",
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 22,
+          ),
+        ),
+        leading: _isSelecting
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() => _selected.clear()),
+              )
+            : null,
+        actions: !_isSelecting
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.archive_outlined),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ArchiveScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ]
+            : [],
       ),
+
+      // ================= BODY =================
       body: SafeArea(
+        top: false,
         child: ValueListenableBuilder(
           valueListenable: Hive.box<Habit>('habits').listenable(),
           builder: (_, box, __) {
@@ -36,7 +73,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
             final filtered = habits.where((h) {
               final done = HabitStorage.isDoneToday(h);
-
               if (_filter == FilterType.completed) return done;
               if (_filter == FilterType.pending) return !done;
               return true;
@@ -45,9 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final todayDone =
                 habits.where((h) => HabitStorage.isDoneToday(h)).length;
 
-            final double percent = habits.isEmpty
-                ? 0.0
-                : (todayDone / habits.length).clamp(0.0, 1.0);
+            final percent = habits.isEmpty ? 0.0 : (todayDone / habits.length);
 
             return Column(
               children: [
@@ -55,57 +89,69 @@ class _HomeScreenState extends State<HomeScreen> {
                 _filters(),
                 const SizedBox(height: 10),
                 Expanded(
-                  child: filtered.isEmpty
-                      ? _emptyFilteredState(habits.isEmpty)
-                      : RefreshIndicator(
-                          onRefresh: () async {
-                            setState(() {});
-                          },
-                          child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
-                            itemCount: filtered.length,
-                            itemBuilder: (context, i) {
-                              final h = filtered[i];
+                  child: habits.isEmpty
+                      ? _emptyState()
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, i) {
+                            final h = filtered[i];
+                            final isSelected = _selected.contains(h);
 
-                              return HabitCard(
-                                habit: h,
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                color: isSelected
+                                    ? const Color(0xFF4F8CFF).withOpacity(0.15)
+                                    : Colors.transparent,
+                                border: isSelected
+                                    ? Border.all(
+                                        color: const Color(0xFF4F8CFF),
+                                        width: 1.5,
+                                      )
+                                    : null,
+                              ),
+                              child: GestureDetector(
+                                onLongPress: () {
+                                  setState(() => _selected.add(h));
+                                },
                                 onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          HabitDetailScreen(habit: h),
-                                    ),
-                                  );
-                                },
-                                onEdit: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
-                                    builder: (_) => HabitSheet(habit: h),
-                                  );
-                                },
-                                onDelete: () async {
-                                  await HabitStorage.archive(h);
-
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text("Habit archived"),
-                                        action: SnackBarAction(
-                                          label: "Undo",
-                                          onPressed: () {
-                                            HabitStorage.restore(h);
-                                          },
-                                        ),
+                                  if (_isSelecting) {
+                                    setState(() {
+                                      isSelected
+                                          ? _selected.remove(h)
+                                          : _selected.add(h);
+                                    });
+                                  } else {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            HabitDetailScreen(habit: h),
                                       ),
                                     );
                                   }
                                 },
-                              );
-                            },
-                          ),
+                                child: HabitCard(
+                                  habit: h,
+                                  onTap: () {},
+                                  onEdit: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (_) => HabitSheet(habit: h),
+                                    );
+                                  },
+                                  onDelete: () async {
+                                    await HabitStorage.archive(h);
+                                  },
+                                ),
+                              ),
+                            );
+                          },
                         ),
                 ),
               ],
@@ -113,92 +159,77 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF4F8CFF),
-        elevation: 6,
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => const HabitSheet(),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
+
+      // ================= FLOATING ACTION =================
+      floatingActionButton: !_isSelecting
+          ? FloatingActionButton(
+              backgroundColor: const Color(0xFF4F8CFF),
+              elevation: 6,
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => const HabitSheet(),
+                );
+              },
+              child: const Icon(Icons.add),
+            )
+          : null,
+
+      // ================= BOTTOM ACTION BAR (SELECTION MODE) =================
+      bottomNavigationBar: _isSelecting
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: const BoxDecoration(
+                color: Color(0xFF111827),
+                border: Border(
+                  top: BorderSide(color: Colors.white10),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    onPressed: _moveSelectedToTrash,
+                    icon:
+                        const Icon(Icons.delete_outline, color: Colors.orange),
+                    label: const Text("Move to Trash",
+                        style: TextStyle(color: Colors.orange)),
+                  ),
+                  TextButton.icon(
+                    onPressed: _confirmPermanentDelete,
+                    icon: const Icon(Icons.delete_forever, color: Colors.red),
+                    label: const Text("Delete",
+                        style: TextStyle(color: Colors.red)),
+                  ),
+                ],
+              ),
+            )
+          : null,
     );
   }
 
-  // ================= HEADER =================
-
   Widget _header(int done, int total, double percent) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Today",
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ArchiveScreen(),
-                    ),
-                  );
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        Icons.archive_outlined,
-                        size: 16,
-                        color: Colors.white70,
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        "Archive",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
           Text(
             "$done / $total completed",
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: LinearProgressIndicator(
               value: percent,
-              minHeight: 10,
+              minHeight: 8,
               backgroundColor: Colors.white12,
               valueColor: const AlwaysStoppedAnimation(Color(0xFF4F8CFF)),
             ),
@@ -207,8 +238,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  // ================= FILTERS =================
 
   Widget _filters() {
     return Padding(
@@ -249,51 +278,52 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ================= EMPTY STATES =================
-
-  Widget _emptyFilteredState(bool noHabitsAtAll) {
-    if (noHabitsAtAll) {
-      return _emptyState();
-    }
-
+  Widget _emptyState() {
     return const Center(
       child: Text(
-        "No habits in this filter",
+        "No habits yet 🚀",
         style: TextStyle(
-          color: Colors.white54,
-          fontSize: 16,
+          color: Colors.white70,
+          fontSize: 18,
         ),
       ),
     );
   }
 
-  Widget _emptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            "No habits yet 🚀",
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 18,
-            ),
+  Future<void> _moveSelectedToTrash() async {
+    for (var h in _selected) {
+      await HabitStorage.archive(h);
+    }
+    setState(() => _selected.clear());
+  }
+
+  void _confirmPermanentDelete() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1F2937),
+        title: const Text("Delete Forever?"),
+        content: const Text(
+          "This action cannot be undone.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
           ),
-          const SizedBox(height: 16),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4F8CFF),
+              backgroundColor: Colors.red,
             ),
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => const HabitSheet(),
-              );
+            onPressed: () async {
+              for (var h in _selected) {
+                await HabitStorage.delete(h);
+              }
+              Navigator.pop(context);
+              setState(() => _selected.clear());
             },
-            child: const Text("Create Habit"),
-          )
+            child: const Text("Delete"),
+          ),
         ],
       ),
     );

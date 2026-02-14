@@ -43,7 +43,7 @@ class _MainShellState extends State<MainShell> {
           CalendarScreen(habits: habits),
           const StatsScreen(),
           const ReportScreen(),
-          const TrendsScreen(),
+          TrendsScreen(),
           const SettingsScreen(),
         ];
 
