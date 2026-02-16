@@ -1,5 +1,5 @@
 # habit
-REST DAY
+REST DAY.
 A new Flutter project.
 Recovering.
 
