@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +14,7 @@ class ReportScreen extends StatelessWidget {
   static const cardColor = Color(0xFF162235);
   static const accent = Color(0xFF4F8CFF);
 
+  // ================= LAST 7 DAYS =================
   Map<String, int> _last7DaysTotals(List<Habit> habits) {
     final map = <String, int>{};
     final today = DateTime.now();
@@ -32,6 +34,21 @@ class ReportScreen extends StatelessWidget {
     }
 
     return map;
+  }
+
+  int _thisMonthTotal(List<Habit> habits) {
+    final now = DateTime.now();
+    int total = 0;
+
+    for (var h in habits) {
+      for (var d in h.completedDates) {
+        final date = DateTime.parse(d);
+        if (date.month == now.month && date.year == now.year) {
+          total++;
+        }
+      }
+    }
+    return total;
   }
 
   @override
@@ -63,8 +80,8 @@ class ReportScreen extends StatelessWidget {
             );
           }
 
-          int totalDone = 0;
           int doneToday = 0;
+          int totalDone = 0;
 
           for (var h in habits) {
             totalDone += HabitStorage.total(h);
@@ -73,36 +90,62 @@ class ReportScreen extends StatelessWidget {
             }
           }
 
-          final weeklyData = _last7DaysTotals(habits);
-          final weeklyValues = weeklyData.values.toList();
+          final weekly = _last7DaysTotals(habits);
+          final weeklyValues = weekly.values.toList();
+          final monthTotal = _thisMonthTotal(habits);
 
-          final sortedHabits = [...habits]..sort(
-              (a, b) => HabitStorage.total(b).compareTo(HabitStorage.total(a)));
+          final double percent =
+              habits.isEmpty ? 0.0 : doneToday / habits.length;
 
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              // ===== TODAY SUMMARY =====
+              // ================= TODAY SUMMARY =================
               _card(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
                     const Text(
-                      "Today",
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600),
+                      "Today's Performance",
+                      style: TextStyle(color: Colors.white70),
                     ),
-                    Text(
-                      "$doneToday / ${habits.length} completed",
-                      style: const TextStyle(color: Colors.white70),
+                    const SizedBox(height: 20),
+
+                    // Custom Modern Ring
+                    SizedBox(
+                      height: 170,
+                      width: 170,
+                      child: CustomPaint(
+                        painter: _RingPainter(percent),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "${(percent * 100).toInt()}%",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                "$doneToday / ${habits.length}",
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 25),
 
-              // ===== WEEKLY BAR CHART =====
+              // ================= WEEKLY BAR CHART =================
               _card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,7 +157,7 @@ class ReportScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
-                      height: 180,
+                      height: 190,
                       child: BarChart(
                         BarChartData(
                           gridData: FlGridData(show: false),
@@ -133,17 +176,13 @@ class ReportScreen extends StatelessWidget {
                               sideTitles: SideTitles(
                                 showTitles: true,
                                 getTitlesWidget: (value, meta) {
-                                  const labels = [
-                                    "M",
-                                    "T",
-                                    "W",
-                                    "T",
-                                    "F",
-                                    "S",
-                                    "S"
-                                  ];
+                                  final today = DateTime.now();
+                                  final date = today.subtract(
+                                      Duration(days: 6 - value.toInt()));
+                                  final label = DateFormat.E().format(date);
+
                                   return Text(
-                                    labels[value.toInt()],
+                                    label.substring(0, 1),
                                     style: const TextStyle(
                                       color: Colors.white70,
                                       fontSize: 12,
@@ -160,8 +199,8 @@ class ReportScreen extends StatelessWidget {
                               barRods: [
                                 BarChartRodData(
                                   toY: weeklyValues[i].toDouble(),
+                                  width: 16,
                                   color: accent,
-                                  width: 18,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                               ],
@@ -174,55 +213,22 @@ class ReportScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 25),
 
-              // ===== HABIT RANKING =====
-              _card(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Habit Ranking",
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 16),
-                    ...sortedHabits.take(5).map((h) {
-                      final total = HabitStorage.total(h);
-
-                      final max = sortedHabits
-                          .map((e) => HabitStorage.total(e))
-                          .reduce((a, b) => a > b ? a : b);
-
-                      final double percent = max == 0 ? 0.0 : total / max;
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              h.name,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            LinearProgressIndicator(
-                              value: percent,
-                              backgroundColor: Colors.white12,
-                              valueColor: const AlwaysStoppedAnimation(accent),
-                              minHeight: 8,
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                ),
+              // ================= STATS ROW =================
+              Row(
+                children: [
+                  Expanded(
+                    child: _statTile("This Month", monthTotal.toString()),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: _statTile("All Time", totalDone.toString()),
+                  ),
+                ],
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
             ],
           );
         },
@@ -232,12 +238,76 @@ class ReportScreen extends StatelessWidget {
 
   Widget _card({required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: child,
     );
   }
+
+  Widget _statTile(String title, String value) {
+    return _card(
+      child: Column(
+        children: [
+          Text(title, style: const TextStyle(color: Colors.white70)),
+          const SizedBox(height: 10),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
+
+// ================= CUSTOM RING PAINTER =================
+class _RingPainter extends CustomPainter {
+  final double percent;
+
+  _RingPainter(this.percent);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = 14.0;
+    final radius = (size.width / 2) - stroke;
+
+    final center = Offset(size.width / 2, size.height / 2);
+
+    final backgroundPaint = Paint()
+      ..color = Colors.white12
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke;
+
+    final progressPaint = Paint()
+      ..color = ReportScreen.accent
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius, backgroundPaint);
+
+    final sweep = 2 * pi * percent;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2,
+      sweep,
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
